@@ -1,0 +1,19 @@
+Machine Learning Fundamentals
+
+Machine learning is a branch of artificial intelligence that enables computers to learn from data without being explicitly programmed. It uses statistical techniques to give computer systems the ability to progressively improve their performance on a specific task.
+
+Types of Machine Learning
+
+There are three main types of machine learning: supervised learning, unsupervised learning, and reinforcement learning. Each type has its own characteristics and use cases.
+
+Supervised Learning
+
+In supervised learning, the algorithm learns from labeled training data. The training data includes both the input features and the desired output. Common examples include classification and regression tasks.
+
+Unsupervised Learning
+
+Unsupervised learning works with unlabeled data. The algorithm tries to find hidden patterns or structures in the data without explicit guidance. Clustering and dimensionality reduction are common unsupervised techniques.
+
+Reinforcement Learning
+
+Reinforcement learning involves an agent that learns to make decisions by performing actions in an environment. The agent receives rewards or penalties based on its actions, gradually learning an optimal strategy.

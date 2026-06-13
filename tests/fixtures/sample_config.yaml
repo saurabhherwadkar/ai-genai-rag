@@ -1,0 +1,26 @@
+application:
+  name: "Test RAG Pipeline"
+  version: "1.0.0"
+  environment: "test"
+
+ingestion:
+  chunking:
+    chunk_size: 200
+    chunk_overlap: 30
+    separator: "\n\n"
+    min_chunk_size: 20
+  embedding:
+    model_name: "all-MiniLM-L6-v2"
+    batch_size: 8
+    normalize: true
+
+vectorstore:
+  collection_name: "test_documents"
+  persist_directory: null
+  distance_metric: "cosine"
+
+retrieval:
+  top_k: 3
+  similarity_threshold: 0.25
+  rerank_enabled: true
+  max_query_length: 500

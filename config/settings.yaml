@@ -1,0 +1,53 @@
+# =============================================================================
+# RAG Pipeline - Base Configuration
+# =============================================================================
+# This file contains all configurable parameters for the RAG pipeline.
+# Environment-specific overrides go in settings.dev.yaml or settings.prod.yaml.
+# Environment variables prefixed with RAG_ take highest priority.
+
+application:
+  name: "AI GenAI RAG Pipeline"
+  version: "1.0.0"
+  environment: "development"
+
+ingestion:
+  chunking:
+    chunk_size: 512
+    chunk_overlap: 50
+    separator: "\n\n"
+    min_chunk_size: 50
+  embedding:
+    model_name: "all-MiniLM-L6-v2"
+    batch_size: 32
+    normalize: true
+  supported_extensions:
+    - ".txt"
+    - ".md"
+    - ".pdf"
+    - ".json"
+
+vectorstore:
+  collection_name: "rag_documents"
+  persist_directory: null
+  distance_metric: "cosine"
+
+retrieval:
+  top_k: 5
+  similarity_threshold: 0.3
+  rerank_enabled: true
+  max_query_length: 1000
+
+generation:
+  system_template: "You are a helpful assistant. Answer the question based only on the provided context. If the context does not contain enough information, say so."
+  user_template: "Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+  response_max_length: 2000
+
+security:
+  max_input_length: 5000
+  allowed_file_extensions:
+    - ".txt"
+    - ".md"
+    - ".pdf"
+    - ".json"
+  enable_path_traversal_check: true
+  max_file_size_mb: 50

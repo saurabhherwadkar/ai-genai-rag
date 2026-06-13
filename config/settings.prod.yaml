@@ -1,0 +1,21 @@
+# =============================================================================
+# RAG Pipeline - Production Environment Overrides
+# =============================================================================
+# These settings override the base settings.yaml for production deployment.
+
+application:
+  environment: "production"
+
+ingestion:
+  chunking:
+    chunk_size: 512
+    chunk_overlap: 50
+  embedding:
+    batch_size: 64
+
+vectorstore:
+  persist_directory: "./chroma_data"
+
+retrieval:
+  top_k: 5
+  similarity_threshold: 0.4

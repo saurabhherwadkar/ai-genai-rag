@@ -1,0 +1,21 @@
+# =============================================================================
+# RAG Pipeline - Development Environment Overrides
+# =============================================================================
+# These settings override the base settings.yaml for local development.
+
+application:
+  environment: "development"
+
+ingestion:
+  chunking:
+    chunk_size: 256
+    chunk_overlap: 30
+  embedding:
+    batch_size: 16
+
+vectorstore:
+  persist_directory: null
+
+retrieval:
+  top_k: 3
+  similarity_threshold: 0.2
