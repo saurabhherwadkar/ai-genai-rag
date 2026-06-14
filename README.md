@@ -184,14 +184,91 @@ Environment variables prefixed with `RAG_` override configuration:
 
 ## Architecture
 
-### Ingestion Flow
-```
-File System → DocumentLoader → TextChunker → EmbeddingGenerator → VectorStoreManager
-```
+### End-to-End Flow Diagram
 
-### Query Flow
 ```
-User Query → QueryProcessor → Retriever → Reranker → ResponseGenerator → Answer
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           INGESTION PIPELINE                                    │
+│                                                                                 │
+│  ┌──────────┐    ┌────────────────┐    ┌─────────────┐    ┌────────────────┐   │
+│  │   File   │    │  DocumentLoader │    │ TextChunker │    │   Embedding    │   │
+│  │  System  │───▶│                │───▶│             │───▶│   Generator    │   │
+│  │          │    │ .txt .md .pdf  │    │ Split text  │    │                │   │
+│  │ /data/*  │    │ .json          │    │ with overlap│    │ sentence-      │   │
+│  └──────────┘    └────────────────┘    └─────────────┘    │ transformers   │   │
+│                                                            └───────┬────────┘   │
+│                                                                    │            │
+│                                                                    ▼            │
+│                                                     ┌──────────────────────┐    │
+│                                                     │  VectorStoreManager  │    │
+│                                                     │                      │    │
+│                                                     │  ChromaDB            │    │
+│                                                     │  (cosine similarity) │    │
+│                                                     └──────────┬───────────┘    │
+│                                                                │               │
+└────────────────────────────────────────────────────────────────┼────────────────┘
+                                                                 │
+                          ┌──────────────────────────────────────┘
+                          │  Stored: chunk_id, embedding,
+                          │  content, metadata
+                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            QUERY PIPELINE                                        │
+│                                                                                 │
+│  ┌──────────┐    ┌────────────────┐    ┌─────────────────────────────────────┐  │
+│  │  User    │    │ InputSanitizer │    │         QueryProcessor              │  │
+│  │  Query   │───▶│                │───▶│                                     │  │
+│  │          │    │ Security check │    │ 1. Normalize whitespace             │  │
+│  │ "What is │    │ Prompt inject. │    │ 2. Remove special chars             │  │
+│  │  RAG?"   │    │ detection      │    │ 3. Validate length                  │  │
+│  └──────────┘    └────────────────┘    └──────────────────┬──────────────────┘  │
+│                                                           │                     │
+│                                                           ▼                     │
+│                  ┌─────────────────────────────────────────────────────────┐     │
+│                  │                    Retriever                            │     │
+│                  │                                                         │     │
+│                  │  1. Embed query (sentence-transformers)                 │     │
+│                  │  2. Similarity search (ChromaDB) ──── Semantic Search   │     │
+│                  │  3. Keyword search (ChromaDB) ─────── Syntactic Search  │     │
+│                  │  4. RRF (Reciprocal Rank Fusion) to merge results       │     │
+│                  │  5. Filter by similarity threshold                      │     │
+│                  │  6. Deduplicate overlapping chunks                      │     │
+│                  │                                                         │     │
+│                  └────────────────────────────┬────────────────────────────┘     │
+│                                               │                                 │
+│                                               ▼                                 │
+│                  ┌─────────────────────────────────────────────────────────┐     │
+│                  │                    Reranker                             │     │
+│                  │                                                         │     │
+│                  │  Scoring signals (weighted combination):                │     │
+│                  │    • Similarity score ──────── 60%                      │     │
+│                  │    • Keyword overlap ──────── 30%                       │     │
+│                  │    • Position bonus ───────── 10%                       │     │
+│                  │                                                         │     │
+│                  └────────────────────────────┬────────────────────────────┘     │
+│                                               │                                 │
+│                                               ▼                                 │
+│                  ┌─────────────────────────────────────────────────────────┐     │
+│                  │               ResponseGenerator                         │     │
+│                  │                                                         │     │
+│                  │  1. Build context string from ranked chunks             │     │
+│                  │  2. PromptBuilder: construct RAG prompt                 │     │
+│                  │  3. TemplateEngine: render response                     │     │
+│                  │  4. Format source attributions                          │     │
+│                  │                                                         │     │
+│                  └────────────────────────────┬────────────────────────────┘     │
+│                                               │                                 │
+│                                               ▼                                 │
+│                              ┌─────────────────────────────┐                    │
+│                              │       QueryResponse         │                    │
+│                              │                             │                    │
+│                              │  • Generated answer         │                    │
+│                              │  • Source attributions       │                    │
+│                              │  • Retrieval results        │                    │
+│                              │  • Similarity scores        │                    │
+│                              └─────────────────────────────┘                    │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Design Principles
