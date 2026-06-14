@@ -36,6 +36,9 @@ retrieval:
   similarity_threshold: 0.3
   rerank_enabled: true
   max_query_length: 1000
+  hybrid_search_enabled: true
+  semantic_top_k: 50
+  bm25_top_k: 50
 
 generation:
   system_template: "You are a helpful assistant. Answer the question based only on the provided context. If the context does not contain enough information, say so."

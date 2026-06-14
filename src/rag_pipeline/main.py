@@ -22,6 +22,8 @@ from rag_pipeline.models.pipeline_config import (  # Configuration models
     EmbeddingConfig,
     RetrievalConfig,
 )
+from rag_pipeline.query.bm25_retriever import BM25Retriever  # BM25 keyword retrieval
+from rag_pipeline.query.hybrid_retriever import HybridRetriever  # Hybrid RRF fusion
 from rag_pipeline.query.query_pipeline import QueryPipeline  # Query orchestrator
 from rag_pipeline.query.query_processor import QueryProcessor  # Query preprocessing
 from rag_pipeline.query.reranker import Reranker  # Result reranking
@@ -46,6 +48,7 @@ class RAGApplication:
         self._ingestion_pipeline = None  # Ingestion pipeline (built during setup)
         self._query_pipeline = None  # Query pipeline (built during setup)
         self._vector_store = None  # Shared vector store instance
+        self._bm25_retriever = None  # BM25 retriever (needs index rebuild after ingestion)
 
     def setup(self) -> None:
         """Initialize configuration, logging, and all pipeline components.
@@ -82,6 +85,8 @@ class RAGApplication:
         else:  # Source path does not exist
             print(f"Error: Path not found: {source_path}")  # Report error to user
             sys.exit(1)  # Exit with error code
+        if self._bm25_retriever is not None:
+            self._bm25_retriever.build_index()
 
     def run_query(self, query: str) -> str:
         """Execute a single query through the RAG pipeline.
@@ -222,6 +227,9 @@ class RAGApplication:
             similarity_threshold=retrieval_settings.get("similarity_threshold", 0.3),
             rerank_enabled=retrieval_settings.get("rerank_enabled", True),  # Reranking toggle
             max_query_length=retrieval_settings.get("max_query_length", 1000),  # Max length
+            hybrid_search_enabled=retrieval_settings.get("hybrid_search_enabled", True),
+            semantic_top_k=retrieval_settings.get("semantic_top_k", 50),
+            bm25_top_k=retrieval_settings.get("bm25_top_k", 50),
         )
         embedding_config = EmbeddingConfig(  # Create embedding config for query embedding
             model_name=embedding_settings.get("model_name", "all-MiniLM-L6-v2"),
@@ -233,9 +241,19 @@ class RAGApplication:
         )
         query_processor = QueryProcessor(retrieval_config, input_sanitizer)  # Create processor
         embedding_generator = EmbeddingGenerator(embedding_config)  # Create embedding gen
-        retriever = Retriever(  # Create retriever
+        semantic_retriever = Retriever(  # Create semantic retriever
             self._vector_store, embedding_generator, retrieval_config  # Wire components
         )
+        if retrieval_config.hybrid_search_enabled:
+            self._bm25_retriever = BM25Retriever(
+                self._vector_store, top_k=retrieval_config.bm25_top_k
+            )
+            self._bm25_retriever.build_index()
+            retriever = HybridRetriever(
+                semantic_retriever, self._bm25_retriever, retrieval_config
+            )
+        else:
+            retriever = semantic_retriever
         reranker = Reranker(retrieval_config)  # Create reranker
         # Build response generation components
         system_template = generation_settings.get(  # Get system template

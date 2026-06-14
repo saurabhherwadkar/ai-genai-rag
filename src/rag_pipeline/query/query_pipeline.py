@@ -5,12 +5,17 @@
 
 import logging  # Import logging for pipeline execution tracking
 
+from typing import Protocol
+
 from rag_pipeline.generation.response_generator import ResponseGenerator  # Generation component
-from rag_pipeline.models.query_result import QueryResponse  # Import response model
+from rag_pipeline.models.query_result import QueryResponse, QueryResult  # Import response model
 from rag_pipeline.query.query_processor import QueryProcessor  # Query preprocessing
 from rag_pipeline.query.reranker import Reranker  # Result reranking component
-from rag_pipeline.query.retriever import Retriever  # Retrieval component
 from rag_pipeline.utils.metrics import PerformanceMetrics  # Timing utilities
+
+
+class RetrieverProtocol(Protocol):
+    def retrieve(self, processed_query: str) -> list[QueryResult]: ...
 
 logger = logging.getLogger(__name__)  # Create module-level logger instance
 
@@ -25,7 +30,7 @@ class QueryPipeline:
     def __init__(
         self,
         query_processor: QueryProcessor,
-        retriever: Retriever,
+        retriever: RetrieverProtocol,
         reranker: Reranker,
         response_generator: ResponseGenerator,
     ) -> None:
@@ -33,7 +38,7 @@ class QueryPipeline:
 
         Args:
             query_processor: Component for query preprocessing and validation.
-            retriever: Component for similarity-based retrieval.
+            retriever: Component for retrieval (semantic, BM25, or hybrid).
             reranker: Component for reranking retrieval results.
             response_generator: Component for generating the final response.
         """

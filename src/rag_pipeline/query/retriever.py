@@ -38,11 +38,12 @@ class Retriever:
         self._config = config  # Store retrieval configuration
         self._logger = logger  # Store logger reference for this instance
 
-    def retrieve(self, processed_query: str) -> list[QueryResult]:
+    def retrieve(self, processed_query: str, top_k_override: int | None = None) -> list[QueryResult]:
         """Retrieve relevant chunks for the given processed query.
 
         Args:
             processed_query: Cleaned and validated query string.
+            top_k_override: Optional override for number of results to fetch.
 
         Returns:
             List of QueryResult objects ranked by similarity.
@@ -50,11 +51,12 @@ class Retriever:
         Raises:
             VectorStoreError: If retrieval from the vector store fails.
         """
+        top_k = top_k_override if top_k_override is not None else self._config.top_k
         self._logger.debug("Retrieving for query: '%s'", processed_query[:50])  # Log query
         query_embedding = self._embed_query(processed_query)  # Step 1: Embed the query
         raw_results = self._vector_store.search_similar(  # Step 2: Search vector store
             query_embedding=query_embedding,  # Pass the query embedding
-            top_k=self._config.top_k,  # Limit results to configured top_k
+            top_k=top_k,  # Limit results to top_k
         )
         filtered_results = self._filter_by_threshold(raw_results)  # Step 3: Filter by score
         deduplicated = self._deduplicate_results(filtered_results)  # Step 4: Remove duplicates

@@ -42,3 +42,6 @@ class RetrievalConfig:
     similarity_threshold: float = 0.3  # Minimum similarity score to include a result
     rerank_enabled: bool = True  # Whether to apply reranking after initial retrieval
     max_query_length: int = 1000  # Maximum allowed characters in a query string
+    hybrid_search_enabled: bool = True  # Whether to use hybrid (semantic + BM25) retrieval
+    semantic_top_k: int = 50  # Number of results from semantic search before fusion
+    bm25_top_k: int = 50  # Number of results from BM25 search before fusion
